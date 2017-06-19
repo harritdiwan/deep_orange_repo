@@ -1,0 +1,4 @@
+string classification
+geometry_msgs/Polygon shapes
+geometry_msgs/PoseWithCovariance position
+geometry_msgs/TwistWithCovariance velocity

@@ -1,0 +1,170 @@
+#!/usr/bin/env python
+
+# Author: Harrit Diwan
+# Date: February 17, 2017
+#
+
+import geometry_msgs.msg
+import rospy
+import nav_msgs.msg
+import std_msgs.msg
+import sys
+import sensor_msgs.msg
+import math
+
+class GPSManager():
+    def __init__(self):
+        self.gpsData = None
+        self.gpsnewData = geometry_msgs.msg.TransformStamped()
+
+        self.gpsTopic = "/gps/rtkfix"
+        #self.gpsTopic = "/gps/fix"
+
+        self.pub_gps = rospy.Publisher('vicon/auk/auk', geometry_msgs.msg.TransformStamped , queue_size=10)
+
+        rospy.Subscriber(self.gpsTopic, nav_msgs.msg.Odometry, self.gpsCallback)
+        #rospy.Subscriber(self.gpsTopic, sensor_msgs.msg.NavSatFix, self.gpsCallback)
+        self.lastXLocation = 0
+        self.lastYLocation = 0
+        self.lastZLocation = 0
+        self.lastXrotation = 0
+        self.lastYrotation = 0
+        self.lastZrotation = 0
+        self.lastWrotation = 0
+
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        # TODO: Release/close any resources (semaphores, locks, file descripters, etc)
+        print (type, value, traceback)
+        return self
+
+    def setGPSData(self, data):
+        self.gpsData = data
+
+    def getGPSData(self):
+        gps_original = None
+        if self.gpsData:
+            #gps_original = self.gpsData.pose.position
+            gps_original = self.gpsData
+            #print(gps_original)
+        else:
+            print("no gps data received")
+        return gps_original
+
+
+    def processGPSData(self, t_x, t_y, t_z, r_x, r_y, r_z, r_w):
+    #def processGPSData(self, t_x, t_y, t_z):
+        gps_data = self.getGPSData()
+        self.gpsnewData = geometry_msgs.msg.TransformStamped()
+
+        trans = geometry_msgs.msg.Vector3()
+        rot = geometry_msgs.msg.Quaternion()
+
+        tx = 0
+        ty = 0
+        tz = 0
+        rx = 0
+        ry = 0
+        rz = 0
+        rw = 0
+
+        if gps_data:
+            #trans.x = gps_data.latitude - t_x
+            trans.x = gps_data.pose.pose.position.x - t_x
+            #self.gpsnewData.transform.translation.x = trans.x
+            self.gpsnewData.transform.translation.x = trans.x
+            #tx = gps_data.latitude
+            tx = gps_data.pose.pose.position.x
+
+            #trans.y = gps_data.longitude - t_y
+            trans.y = gps_data.pose.pose.position.y - t_y
+            self.gpsnewData.transform.translation.y = trans.y
+            #self.gpsnewData.transform.translation.y = trans.y
+            #ty = gps_data.longitude
+            ty = gps_data.pose.pose.position.y
+
+            #trans.z = gps_data.altitude - t_z
+            trans.z = gps_data.pose.pose.position.z - t_z
+            self.gpsnewData.transform.translation.z  = trans.z
+            #self.gpsnewData.transform.translation.z  = trans.z
+            #tz = gps_data.altitude
+            tz = gps_data.pose.pose.position.z
+
+            #A = [gps_data.latitude , gps_data.longitude , gps_data.altitude]
+            #B = [t_x, t_y, t_z]
+
+            #r_x = A[0] - B[0]
+            #r_y = A[1] - B[1]
+            #r_z = A[2] - B[2]
+
+            #mag = math.sqrt(r_x*r_x + r_y*r_y + r_z*r_z)
+
+            #if mag == 0:
+             #   mag = 0.001
+
+            #angle_x = math.acos(r_x/mag)
+            #angle_y = math.acos(r_y/mag)
+            #angle_z = math.acos(r_z/mag)
+
+            #t0 = math.cos(angle_z/2)
+            #t1 = math.sin(angle_z/2)
+            #t2 = math.cos(angle_y/2)
+            #t3 = math.sin(angle_y/2)
+            #t4 = math.cos(angle_x/2)
+            #t5 = math.sin(angle_x/2)
+
+            #rot.x = t0 * t3 * t4 - t1 * t2 * t5
+            rot.x = gps_data.pose.pose.orientation.x - r_x
+            self.gpsnewData.transform.rotation.x = rot.x
+            #self.gpsnewData.transform.rotation.x = rot.x
+            rx = gps_data.pose.pose.orientation.x
+            #rot.y = t0 * t2 * t5 + t1 * t3 * t4
+            rot.y = gps_data.pose.pose.orientation.y - r_y
+            self.gpsnewData.transform.rotation.y = rot.y
+            #self.gpsnewData.transform.rotation.y = rot.y
+            ry = gps_data.pose.pose.orientation.y
+            #rot.z = t1 * t2 * t4 - t0 * t3 * t5
+            rot.z = gps_data.pose.pose.orientation.z - r_z
+            self.gpsnewData.transform.rotation.z = rot.z
+            #self.gpsnewData.transform.rotation.z = rot.z
+            rz = gps_data.pose.pose.orientation.z
+            #rot.w = t0 * t2 * t4 + t1 * t3 * t5
+            rot.w = gps_data.pose.pose.orientation.w - r_w
+            self.gpsnewData.transform.rotation.w = rot.w
+            #self.gpsnewData.transform.rotation.w = rot.w
+            rw = gps_data.pose.pose.orientation.w
+
+            self.gpsnewData.header = std_msgs.msg.Header()
+            self.gpsnewData.header.stamp = rospy.Time.now()
+            self.gpsnewData.header.frame_id = '/world'
+            self.gpsnewData.child_frame_id = 'vicon/auk/auk'
+            self.pub_gps.publish(self.gpsnewData)
+
+        return tx, ty, tz, rx, ry, rz , rw
+        #return tx, ty, tz
+
+    def gpsCallback(self, data):
+        rospy.logdebug('GPS data received')
+        self.setGPSData(data)
+
+
+
+    def GPSModule(self):
+        rospy.init_node('gpsnode', log_level= rospy.INFO)
+        rate = rospy.Rate(10) # 10hz
+        while not rospy.is_shutdown():
+            self.lastXLocation, self.lastYLocation, self.lastZLocation, self.lastXrotation, self.lastYrotation, self.lastZrotation, self.lastWrotation = self.processGPSData(self.lastXLocation,self.lastYLocation,self.lastZLocation, self.lastXrotation, self.lastYrotation, self.lastZrotation, self.lastWrotation)
+            #self.lastXLocation, self.lastYLocation, self.lastZLocation = self.processGPSData(self.lastXLocation,self.lastYLocation,self.lastZLocation)
+            rate.sleep()
+
+def main(args):
+    pm = GPSManager()
+    pm.GPSModule()
+
+    print('Destroying all the windows...')
+
+if __name__ == '__main__':
+    main(sys.argv)

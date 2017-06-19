@@ -1,0 +1,202 @@
+import csv
+import os
+import threading
+
+import pygame
+
+import constants
+from objects.arrays import *
+from objects.sprite import sprite
+
+
+class map(sprite):
+    WALL = 0
+    ROAD = 1
+    WHITE = 2
+    YELLOW = 3
+
+    def __init__(self):
+        self._blocks = None
+        self._waypoints = []
+        self._surface = None
+        self._cellw = self._cellh = 1
+        
+        self.loaded = False
+        self.lt = threading.Thread(target=self.loadmap, args=('data/map.txt',))
+        self.lt.daemon = True
+        self.lt.start()
+
+    def loadmap(self, filename):
+        self.loaded = self.load_dump()
+
+        try:
+            with open(filename) as csvfile:
+                rows = csv.reader(csvfile, delimiter=',')
+                for row in rows:
+                    if len(row) < 2: continue
+                    self._waypoints.append((float(row[0]),float(row[1])))
+                if not self.loaded:
+                    self.buildmap()
+                    self.save_dump()
+                    self.loaded = True
+        except ValueError as ex:
+            print ("Invalid map file: ", ex)
+        except EnvironmentError:
+            print ("Map file not found!")
+
+    # def interp(self,pts):
+    #         x = np.array([pt[0] for pt in pts])
+    #         y = np.array([pt[1] for pt in pts])
+    #
+    #         if len(x) == 2:
+    #             interp = 'linear'
+    #         elif len(x) >= 4:
+    #             interp = 'cubic'
+    #         else:
+    #             return pts
+    #
+    #         if x[-1] - x[0] != 0:
+    #             xnew = np.linspace(x[0], x[-1], num=abs(x[-1] - x[0]) * 2 * constants.MTOCELL, endpoint=True)
+    #             f = interp1d(x, y, interp)
+    #             return zip(xnew, f(xnew))
+    #         else:
+    #             ynew = np.linspace(y[0], y[-1], num=abs(y[-1] - y[0]) * 2 * constants.MTOCELL, endpoint=True)
+    #             f = interp1d(y, x, interp)
+    #             return zip(f(ynew), ynew)
+
+    def buildmap(self):
+        _temp = np.zeros((constants.MTOCELL * constants.MH, constants.MTOCELL * constants.MW))
+        for wp in self._waypoints:
+            _temp[int(self.transform_y(wp[1] * constants.MTOCELL))][int(wp[0] * constants.MTOCELL)] = map.ROAD
+
+        self._cellw = constants.WIDTH / (constants.MW * constants.MTOCELL)
+        self._cellh = constants.HEIGHT / (constants.MH * constants.MTOCELL)
+
+        if self._cellw != self._cellh:
+            raise ValueError("Invalid map!")
+
+        self._blocks = np.zeros((constants.MTOCELL * constants.MH, constants.MTOCELL * constants.MW))
+        sz = 4 * constants.MTOCELL
+
+        for y in range(0, constants.MTOCELL * constants.MH - 1):
+            for x in range(0, constants.MTOCELL * constants.MW - 1):
+                mat = _temp[y-sz/2:y+sz/2,x-sz/2:x+sz/2]
+                if _temp[y][x] == map.ROAD:
+                    self._blocks[y][x] = map.WHITE
+                elif np.any(mat == map.ROAD):
+                    self._blocks[y][x] = map.ROAD
+
+        for y in range(0, constants.MTOCELL * constants.MH - 1):
+            for x in range(0, constants.MTOCELL * constants.MW - 1):
+                mat = self._blocks[y-2:y+2,x-2:x+2]
+                if not self._blocks[y][x] and np.any(mat == map.ROAD):
+                    self._blocks[y][x] = map.YELLOW
+
+    def transform_y(self,y):
+        return constants.MTOCELL * (constants.MH + constants.TR) - y
+
+    def transform_y_back(self,y):
+        return (constants.MH + constants.TR) - y
+
+    def save_dump(self):
+        np.savetxt('data/map.dump.out', self._blocks, delimiter=',')
+
+    def load_dump(self):
+        if os.path.isfile('data/map.dump.out'):
+            self._blocks = np.loadtxt('data/map.dump.out', delimiter=',')
+            self._cellw = constants.WIDTH / (constants.MW * constants.MTOCELL)
+            self._cellh = constants.HEIGHT / (constants.MH * constants.MTOCELL)
+            return True
+        else:
+            return False
+
+    @property
+    def blocks(self):
+        return np.transpose(self._blocks)
+
+    @property
+    def lane_center(self):
+        return self._waypoints
+
+    @property
+    def size(self):
+        return (self._cellw, self._cellh)
+
+    def pxtomap(self, x, y):
+        return (int(x / self.size[0]), int(y / self.size[1]))
+
+    def pxtomap_tuple(self, xy):
+        return (int(xy[0] / self.size[0]), int(xy[1] / self.size[1]))
+
+    def maptopx(self, r, c):
+        return (int(r * self.size[0]), int(c * self.size[1]))
+
+    def maptopx_tuple(self, rc):
+        return (int(rc[0] * self.size[0]), int(rc[1] * self.size[1]))
+
+    def mtopx(self, m):
+        return int(m * constants.MTOCELL * self.size[0])
+
+    def mtopx_tuple(self, m):
+        return (int(m[0] * constants.MTOCELL * self.size[0]), int(m[1] * constants.MTOCELL * self.size[1]))
+
+    def pxtom(self, px):
+        return px / constants.MTOCELL / self.size[0]
+
+    def pxtom_tuple(self, px):
+        return (px[0] / constants.MTOCELL / self.size[0], px[1] / constants.MTOCELL / self.size[1])
+
+    def render(self,surface):
+        if self._blocks is None:
+            return
+        if self.loaded and self._surface is None:
+            self._surface = pygame.Surface(self.maptopx_tuple((constants.MTOCELL * constants.MW, constants.MTOCELL * constants.MH)))
+
+            for x, row in enumerate(self.blocks):
+                for y, col in enumerate(row):
+                    if col == map.WALL:
+                        # wall
+                        pygame.draw.rect(self._surface, (66, 244, 89),
+                                         (x * self.size[0], y * self.size[1], self.size[0], self.size[1]))
+                    elif col == map.ROAD:
+                        # road
+                        pygame.draw.rect(self._surface, (0, 0, 0),
+                                         (x * self.size[0], y * self.size[1], self.size[0], self.size[1]))
+                    elif col == map.WHITE:
+                        # white lane
+                        pygame.draw.rect(self._surface, (255, 255, 255),
+                                         (x * self.size[0], y * self.size[1], self.size[0], self.size[1]))
+                    elif col == map.YELLOW:
+                        # no cross lane
+                        pygame.draw.rect(self._surface, (255, 255, 0),
+                                         (x * self.size[0], y * self.size[1], self.size[0], self.size[1]))
+
+                # unit of measure
+                pygame.draw.rect(self._surface, (244, 86, 66),
+                                 (0, 0, constants.MTOCELL * self.size[0], constants.MTOCELL * self.size[1]))
+        elif self._surface is not None:
+            surface.blit(self._surface,(0,0))
+
+    @property
+    def width(self):
+        return len(self.blocks)
+
+    @property
+    def height(self):
+        return len(self.blocks[0])
+
+    def inside(self,pos):
+        if self.width <= pos[0] or self.height <= pos[1]:
+            return False
+        if 0 > pos[0] or 0 > pos[1]:
+            return False
+        return True
+
+    def checkcollision(self, points):
+        for pt in points:
+            pos = self.pxtomap(pt[0], pt[1])
+            if not self.inside(pos):
+                return True
+            if self.blocks[pos[0]][pos[1]] in (map.WALL, map.YELLOW):
+                return True
+        return False

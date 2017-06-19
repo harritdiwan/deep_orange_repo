@@ -1,0 +1,2 @@
+obstacleInfo[] objects
+nav_msgs/OccupancyGrid occupancyGrid

@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="simulator" type="behavior_planner.py" name="behaviour_manager" respawn="false"/>
+    <node pkg="simulator" type="node_sim.py" name="simulator" respawn="false"/>
+</launch>

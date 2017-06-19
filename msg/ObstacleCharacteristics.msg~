@@ -1,0 +1,14 @@
+# Custom message. This message will contain description, pose, orientation, velocity and bounding polygons for the detected obstacles. 
+
+# String describing the detected obstacle
+string description
+
+# Global position and velocity of the	
+Odometry pose_velocity	 obstacle
+
+# Bounding points of the obstacle
+Polygon shape		
+
+# Estimated trajectory of the obstacle
+Path trajectory		
+

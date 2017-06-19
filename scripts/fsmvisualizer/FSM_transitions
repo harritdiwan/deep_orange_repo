@@ -1,0 +1,87 @@
+digraph {
+	MasterManager
+		MasterManager -> AutonomousManager [color=red]
+	AutonomousManager
+		AutonomousManager -> RegularManager [color=red]
+	RegularManager
+	IdleManager
+	ManeuverManager
+		IdleManager -> ManeuverManager [label=mission_received color=black]
+	ManeuverManager
+	IntersectionManager
+		ManeuverManager -> IntersectionManager [label=intersection_ahead color=black]
+	ManeuverManager
+	DriveManager
+		ManeuverManager -> DriveManager [label=drive_ahead color=black]
+	ManeuverManager
+	IdleManager
+		ManeuverManager -> IdleManager [label=mission_accomplished color=black]
+	DriveManager
+	IntersectionManager
+		DriveManager -> IntersectionManager [label=intersection_ahead color=black]
+	DriveManager
+	ManeuverManager
+		DriveManager -> ManeuverManager [label=maneuver_ahead color=black]
+	IntersectionManager
+	DriveManager
+		IntersectionManager -> DriveManager [label=entry_ahead color=black]
+		RegularManager -> IdleManager [color=red]
+	IdleManager
+	IntersectionManager
+	WaitPrecedence
+	Navigate
+		WaitPrecedence -> Navigate [label=right_of_way color=black]
+	Navigate
+	WaitClearance
+		Navigate -> WaitClearance [label=obstacle_ahead color=black]
+	WaitClearance
+	Navigate
+		WaitClearance -> Navigate [label=intersection_clear color=black]
+		IntersectionManager -> WaitPrecedence [color=red]
+	WaitPrecedence
+	WaitClearance
+	Navigate
+	DriveManager
+	LaneChange
+	LaneKeeping
+		LaneChange -> LaneKeeping [label=correct_lane color=black]
+	LaneKeeping
+	LaneChange
+		LaneKeeping -> LaneChange [label=wrong_lane color=black]
+	LaneKeeping
+	LaneChange
+		LaneKeeping -> LaneChange [label=obstacle_ahead_avoid color=black]
+	LaneKeeping
+	StopDetected
+		LaneKeeping -> StopDetected [label=stop_ahead color=black]
+	LaneKeeping
+	CheckpointDetected
+		LaneKeeping -> CheckpointDetected [label=checkpoint_ahead color=black]
+	LaneChange
+	CheckpointDetected
+	StopDetected
+		DriveManager -> LaneKeeping [color=red]
+	LaneKeeping
+	ManeuverManager
+	Evaluate
+	EmergencyBrake
+		Evaluate -> EmergencyBrake [label=no_lanes_ahead color=black]
+	Evaluate
+	Parking
+		Evaluate -> Parking [label=parking_ahead color=black]
+	Parking
+	Evaluate
+		Parking -> Evaluate [label=parking_accomplished color=black]
+	EmergencyBrake
+	NavigateToLanes
+		EmergencyBrake -> NavigateToLanes [label=vehicle_is_still color=black]
+	NavigateToLanes
+	NavigateToCheckpoint
+		NavigateToLanes -> NavigateToCheckpoint [label=checkpoint_ahead color=black]
+	NavigateToLanes
+	Parking
+	NavigateToCheckpoint
+		ManeuverManager -> Evaluate [color=red]
+	Evaluate
+	EmergencyBrake
+}

@@ -1,0 +1,6 @@
+<launch>
+    <node pkg="simulator" type="mission_planner.py" name="mission_planner" respawn="false"/>
+    <node pkg="simulator" type="behavior_planner.py" name="behaviour_manager" respawn="false"/>
+    <node pkg="simulator" type="node_sim.py" name="simulator" respawn="false"/>
+    <node pkg="simulator" type="fsm_visualization.py" name="fsmviz" respawn="false"/>
+</launch>

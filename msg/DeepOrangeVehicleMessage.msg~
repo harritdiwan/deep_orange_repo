@@ -1,0 +1,15 @@
+# Custom message. This message will contain description the information about the deep orange car as well as what the car senses around itself. 
+
+# Timestamp and identifier of the message
+Header header
+string vehicle_id		# Vehicle identifier for the telemetry
+nav_msgs/Odometry RTK_GPS_Fixed_location	# RTK Fixed Geographical Location
+sensor_msgs/NavSatFix GPS_location		# Global GPS coordinate
+geometry_msgs/TwistWithCovariance velocity # Velocity of the vehicle
+geometry_msgs/Accel acceleration		# Acceleration of the vehicle
+diagnostic_msgs/DiagnosticArray vehicleMonitor	#(see note below) Vehicle monitoring message
+geometry_msgs/PoseWithCovariance heading_direction	# Vehicle heading direction
+Obstacle_characteristics obstacles		# properties of obstacles
+sensor_msgs/BatteryState battery_status		# Status of the vehicle battery
+string behavior		# Behavioral maneuver the car is performing, for eg., lane change, over-taking, etc.
+
